@@ -39,6 +39,7 @@ create table if not exists public.etiquetas_azuis (
   status text not null default 'Concluído' check (status = 'Concluído')
 );
 
+
 alter table public.locais enable row level security;
 alter table public.tipos_registro enable row level security;
 alter table public.funcionarios enable row level security;

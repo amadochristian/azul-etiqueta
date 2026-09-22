@@ -16,3 +16,22 @@
 .draft-chip, .sync-badge { display:none !important; }
 .sidebar-foot small { display:none; }
 .autosave { display:none; }
+.field-grid.three { grid-template-columns:repeat(2, 1fr); }
+.field-grid.three > .field:first-child { display:none; }
+.field-grid.three > .field:last-child { display:none; }
+.form-layout { gap:0; }
+.form-layout > .form-panel:first-of-type { border-bottom-left-radius:0; border-bottom-right-radius:0; border-bottom:0; box-shadow:none; }
+.form-layout > .form-panel:nth-of-type(2) { border-top-left-radius:0; border-top-right-radius:0; border-top:0; box-shadow:var(--shadow); padding-top:0; }
+.section-divider { display:flex; }
+.execution-panel { display:block; margin-top:18px; }
+.form-footer { margin-top:18px; }
+.section-divider { display:none; }
+.form-layout > .form-panel:nth-of-type(2) { border-bottom-left-radius:0; border-bottom-right-radius:0; box-shadow:none; }
+.form-layout > .form-panel:nth-of-type(2) { border-bottom:0; }
+.execution-panel { border-top:0; border-top-left-radius:0; border-top-right-radius:0; margin-top:0; }
+.execution-panel .field-grid.two { grid-template-columns:1fr; }
+.execution-panel .field-grid.two > .field:first-child { display:none; }
+.page-heading { margin-bottom:18px; }
+.page-heading h1 { font-size:28px; margin:5px 0 4px; }
+.page-heading p { font-size:12px; }
+@media (max-width:480px) { .page { padding-top:22px; } .page-heading { margin-bottom:15px; } .page-heading h1 { font-size:24px; } .page-heading p { font-size:11px; } }

@@ -15,6 +15,8 @@ const fallback = {
   funcionarios: [{ id: 'func-1', re: '10482', nome: 'Mariana Alves' }, { id: 'func-2', re: '10931', nome: 'João Santos' }, { id: 'func-3', re: '11204', nome: 'Camila Rocha' }],
 }
 const today = () => new Date().toISOString().slice(0, 10)
+const formatDate = (value) => value ? value.split('-').reverse().join('/') : ''
+const parseDate = (value) => { const digits = value.replace(/\D/g, '').slice(0, 8); const day = digits.slice(0, 2); const month = digits.slice(2, 4); const year = digits.slice(4, 8); return { display: [day, month, year].filter(Boolean).join('/'), iso: day.length === 2 && month.length === 2 && year.length === 4 ? `${year}-${month}-${day}` : '' } }
 
 export default function App() { return <BrowserRouter><Shell /></BrowserRouter> }
 function Shell() {

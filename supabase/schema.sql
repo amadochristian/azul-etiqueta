@@ -44,6 +44,11 @@ alter table public.tipos_registro enable row level security;
 alter table public.funcionarios enable row level security;
 alter table public.etiquetas_azuis enable row level security;
 
+drop policy if exists "leitura publica de locais" on public.locais;
+drop policy if exists "leitura publica de tipos" on public.tipos_registro;
+drop policy if exists "leitura publica de funcionarios" on public.funcionarios;
+drop policy if exists "leitura publica de etiquetas" on public.etiquetas_azuis;
+drop policy if exists "insercao publica de etiquetas" on public.etiquetas_azuis;
 create policy "leitura publica de locais" on public.locais for select using (true);
 create policy "leitura publica de tipos" on public.tipos_registro for select using (true);
 create policy "leitura publica de funcionarios" on public.funcionarios for select using (true);
@@ -55,6 +60,9 @@ create policy "insercao publica de etiquetas" on public.etiquetas_azuis for inse
 drop policy if exists "admin autenticado gerencia locais" on public.locais;
 drop policy if exists "admin autenticado gerencia tipos" on public.tipos_registro;
 drop policy if exists "admin autenticado gerencia funcionarios" on public.funcionarios;
+drop policy if exists "admin gerencia locais" on public.locais;
+drop policy if exists "admin gerencia tipos" on public.tipos_registro;
+drop policy if exists "admin gerencia funcionarios" on public.funcionarios;
 create policy "admin gerencia locais" on public.locais for all to anon, authenticated using (true) with check (true);
 create policy "admin gerencia tipos" on public.tipos_registro for all to anon, authenticated using (true) with check (true);
 create policy "admin gerencia funcionarios" on public.funcionarios for all to anon, authenticated using (true) with check (true);

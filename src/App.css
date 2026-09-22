@@ -31,6 +31,14 @@
 .execution-panel { border-top:0; border-top-left-radius:0; border-top-right-radius:0; margin-top:0; }
 .execution-panel .field-grid.two { grid-template-columns:1fr; }
 .execution-panel .field-grid.two > .field:first-child { display:none; }
+.form-layout > .form-panel:nth-of-type(2) .field-grid.two > .field:first-child > span { font-size:0; }
+.form-layout > .form-panel:nth-of-type(2) .field-grid.two > .field:first-child > span::after { content:'Colaboradores'; font-size:12px; }
+.multi-select-box { align-items:center; border:1px solid #d6e0e7; border-radius:6px; display:flex; flex-wrap:wrap; gap:5px; min-height:45px; padding:5px 10px; }
+.multi-select-box:focus-within { border-color:#5d9bd4; box-shadow:0 0 0 3px #eaf3fc; }
+.multi-select-box > svg { color:#9aa8b5; flex:0 0 auto; }
+.multi-select-box input { border:0!important; box-shadow:none!important; flex:1; min-width:120px; outline:0; padding:6px!important; width:auto; }
+.selected-person { align-items:center; background:#eaf3fc; border-radius:4px; color:#28679b; display:inline-flex; font-size:11px; gap:5px; padding:5px 7px; }
+.selected-person button { background:transparent; border:0; color:#5d89ad; font-size:15px; line-height:12px; padding:0; }
 .page-heading { margin-bottom:18px; }
 .page-heading h1 { font-size:28px; margin:5px 0 4px; }
 .page-heading p { font-size:12px; }

@@ -30,7 +30,7 @@ create table if not exists public.etiquetas_azuis (
   tipo_registro_id uuid not null references public.tipos_registro(id),
   maquina_parada boolean not null default false,
   prioridade text not null check (prioridade in ('A', 'B')),
-  encontrada_por_id uuid not null references public.funcionarios(id),
+  encontrada_por_id uuid[] not null default '{}',
   descricao_anomalia text not null,
   fotos_url text[] not null default '{}',
   executado_por_id uuid references public.funcionarios(id),
@@ -38,6 +38,23 @@ create table if not exists public.etiquetas_azuis (
   tempo_execucao_minutos integer check (tempo_execucao_minutos is null or tempo_execucao_minutos >= 0),
   status text not null default 'Concluído' check (status = 'Concluído')
 );
+
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'etiquetas_azuis'
+      and column_name = 'encontrada_por_id' and udt_name = 'uuid'
+  ) then
+    alter table public.etiquetas_azuis drop constraint if exists etiquetas_azuis_encontrada_por_id_fkey;
+    alter table public.etiquetas_azuis alter column encontrada_por_id drop not null;
+    alter table public.etiquetas_azuis alter column encontrada_por_id type uuid[]
+      using case when encontrada_por_id is null then '{}'::uuid[] else array[encontrada_por_id] end;
+    alter table public.etiquetas_azuis alter column encontrada_por_id set default '{}';
+    update public.etiquetas_azuis set encontrada_por_id = '{}' where encontrada_por_id is null;
+    alter table public.etiquetas_azuis alter column encontrada_por_id set not null;
+  end if;
+end $$;
 
 
 alter table public.locais enable row level security;

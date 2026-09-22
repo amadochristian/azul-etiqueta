@@ -52,9 +52,19 @@ create policy "insercao publica de etiquetas" on public.etiquetas_azuis for inse
 
 -- O CRUD administrativo deve ser protegido por autenticação real em produção.
 -- A política abaixo libera escrita apenas para usuários autenticados.
-create policy "admin autenticado gerencia locais" on public.locais for all to authenticated using (true) with check (true);
-create policy "admin autenticado gerencia tipos" on public.tipos_registro for all to authenticated using (true) with check (true);
-create policy "admin autenticado gerencia funcionarios" on public.funcionarios for all to authenticated using (true) with check (true);
+drop policy if exists "admin autenticado gerencia locais" on public.locais;
+drop policy if exists "admin autenticado gerencia tipos" on public.tipos_registro;
+drop policy if exists "admin autenticado gerencia funcionarios" on public.funcionarios;
+create policy "admin gerencia locais" on public.locais for all to anon, authenticated using (true) with check (true);
+create policy "admin gerencia tipos" on public.tipos_registro for all to anon, authenticated using (true) with check (true);
+create policy "admin gerencia funcionarios" on public.funcionarios for all to anon, authenticated using (true) with check (true);
+
+insert into storage.buckets (id, name, public) values ('etiqueta-fotos', 'etiqueta-fotos', true) on conflict (id) do nothing;
+drop policy if exists "fotos publicas" on storage.objects;
+drop policy if exists "upload fotos etiquetas" on storage.objects;
+create policy "fotos publicas" on storage.objects for select to anon, authenticated using (bucket_id = 'etiqueta-fotos');
+create policy "upload fotos etiquetas" on storage.objects for insert to anon, authenticated with check (bucket_id = 'etiqueta-fotos');
 
 insert into public.tipos_registro (nome) values ('Anomalia'), ('Limpeza'), ('Segurança') on conflict (nome) do nothing;
 insert into public.locais (tag, equipamento) values ('EXT-01', 'Extrusora 01'), ('COR-02', 'Cortadeira 02'), ('EMB-01', 'Embaladora 01') on conflict (tag) do nothing;
+insert into public.funcionarios (re, nome) values ('10482', 'Mariana Alves'), ('10931', 'João Santos'), ('11204', 'Camila Rocha') on conflict (re) do nothing;

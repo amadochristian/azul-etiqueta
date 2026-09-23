@@ -6,7 +6,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 export default defineConfig({
   plugins: [react(), VitePWA({
     registerType: 'autoUpdate',
-    includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
+    includeAssets: ['favicon.svg', 'logo azul etiqueta.png'],
     manifest: {
       name: 'Etiqueta Azul | Santher',
       short_name: 'Etiqueta Azul',
@@ -14,7 +14,7 @@ export default defineConfig({
       theme_color: '#0b5cab',
       background_color: '#f4f7fa',
       display: 'standalone',
-      icons: [{ src: '/icone-192.png', sizes: '192x192', type: 'image/png' }, { src: '/icone-512.png', sizes: '512x512', type: 'image/png' }],
+      icons: [{ src: '/logo%20azul%20etiqueta.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' }, { src: '/logo%20azul%20etiqueta.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' }],
     },
   })],
 })

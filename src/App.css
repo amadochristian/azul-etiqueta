@@ -19,6 +19,7 @@
 .field-grid.three { grid-template-columns:repeat(2, 1fr); }
 .field-grid.three > .field:first-child { display:none; }
 .field-grid.three > .field:last-child { display:none; }
+.field:has(.muted-input) { display:none; }
 .form-layout { gap:0; }
 .form-layout > .form-panel:first-of-type { border-bottom-left-radius:0; border-bottom-right-radius:0; border-bottom:0; box-shadow:none; }
 .form-layout > .form-panel:nth-of-type(2) { border-top-left-radius:0; border-top-right-radius:0; border-top:0; box-shadow:var(--shadow); padding-top:0; }

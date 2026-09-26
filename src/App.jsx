@@ -188,7 +188,7 @@ function HomePage({ onSaved }) {
 }
 
 function formatRepairTime(minutes) {
-  if (minutes == null) return '—'
+  if (minutes == null) return 'Não informado'
   const hours = Math.floor(minutes / 60)
   const remainingMinutes = minutes % 60
   if (!hours) return `${minutes} min`
@@ -233,12 +233,11 @@ function DashboardPage() {
         ? row.encontrada_por_id
         : row.encontrada_por_id ? [row.encontrada_por_id] : []
       const foundBy = foundByIds.map((id) => employeesById.get(id)).filter(Boolean)
-      const executor = Array.isArray(row.funcionarios) ? row.funcionarios[0] : row.funcionarios
       const photos = Array.isArray(row.fotos_url) ? row.fotos_url : []
       const minutes = row.tempo_execucao_minutos
       const hours = minutes == null ? 0 : Math.floor(minutes / 60)
       const remainingMinutes = minutes == null ? 0 : minutes % 60
-      const repairTime = minutes == null ? '' : `${hours ? `${hours}h` : ''}${remainingMinutes ? `${remainingMinutes}m` : hours ? '' : `${minutes}m`}`
+      const repairTime = minutes == null ? 'Não informado' : `${hours ? `${hours}h` : ''}${remainingMinutes ? `${remainingMinutes}m` : hours ? '' : `${minutes}m`}`
 
       return [
         row.numero_etiqueta || '',
@@ -249,8 +248,6 @@ function DashboardPage() {
         row.descricao_anomalia || '',
         foundBy.map((employee) => employee.nome).join(', '),
         foundBy.map((employee) => employee.re).join(', '),
-        executor?.nome || '',
-        executor?.re || '',
         row.descricao_acao || '',
         repairTime,
         photos.join(' | '),
@@ -266,8 +263,6 @@ function DashboardPage() {
         'Descrição da Anomalia',
         'Encontrada por (Nomes)',
         'Encontrada por (RE)',
-        'Executado por (Nome)',
-        'Executado por (RE)',
         'Descrição da Ação',
         'Tempo de Reparo',
         'Link Imagem',

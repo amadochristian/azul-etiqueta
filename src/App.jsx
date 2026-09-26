@@ -7,6 +7,7 @@ import { AlertTriangle, ArrowUpRight, BarChart3, Check, ChevronDown, Clock3, Clo
 import Papa from 'papaparse'
 import { supabase } from './lib/supabase'
 import { enqueueLabel, getOfflineQueue, syncOfflineQueue } from './lib/offlineQueue'
+import santherSymbol from '../simbolo-santher.svg'
 import './App.css'
 
 const fallback = {
@@ -79,7 +80,7 @@ function Shell() {
   useEffect(() => { const on = async () => { setOnline(true); await syncOfflineQueue(supabase); setQueue(getOfflineQueue().length) }; const off = () => setOnline(false); addEventListener('online', on); addEventListener('offline', off); if (navigator.onLine) on(); return () => { removeEventListener('online', on); removeEventListener('offline', off) } }, [])
   return <div className="app-shell">
     <aside className={`sidebar ${open ? 'is-open' : ''}`}>
-      <div className="brand"><img src="/simbolo-santher.svg" alt="Santher" /><div><strong>Etiqueta Azul</strong><span>Operação digital</span></div></div>
+      <div className="brand"><img src={santherSymbol} alt="Santher" /><div><strong>Etiqueta Azul</strong><span>Operação digital</span></div></div>
       <nav>
         <NavItem to="/" end icon={<FileText size={18} />} text="Nova etiqueta" />
         <NavItem to="/dashboard" icon={<LayoutDashboard size={18} />} text="Dashboard" />

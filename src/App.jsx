@@ -197,17 +197,24 @@ function formatRepairTime(minutes) {
 
 function DashboardPage() {
   const [rows, setRows] = useState([])
+  const [employees, setEmployees] = useState([])
   const [filters, setFilters] = useState({ start: '', end: '', priority: '' })
 
   useEffect(() => {
     if (supabase) {
-      supabase.from('etiquetas_azuis')
-        .select('*, locais(tag), funcionarios(nome)')
-        .order('data_criacao', { ascending: false })
-        .limit(50)
-        .then(({ data }) => setRows(data || []))
+      Promise.all([
+        supabase.from('etiquetas_azuis')
+          .select('*, locais(tag), funcionarios(id,nome,re)')
+          .order('data_criacao', { ascending: false })
+          .limit(50),
+        supabase.from('funcionarios').select('id,nome,re'),
+      ]).then(([labelsResult, employeesResult]) => {
+        setRows(labelsResult.data || [])
+        setEmployees(employeesResult.data || [])
+      })
     } else {
       setRows(JSON.parse(localStorage.getItem('demo-labels') || '[]'))
+      setEmployees(JSON.parse(localStorage.getItem('azul-catalog-funcionarios') || 'null') || fallback.funcionarios)
     }
   }, [])
 
@@ -220,7 +227,54 @@ function DashboardPage() {
     ? Math.round(filtered.reduce((sum, row) => sum + (row.tempo_execucao_minutos || 0), 0) / filtered.length)
     : 0
   const exportCsv = () => {
-    const url = URL.createObjectURL(new Blob([Papa.unparse(filtered)], { type: 'text/csv;charset=utf-8;' }))
+    const employeesById = new Map(employees.map((employee) => [employee.id, employee]))
+    const data = filtered.map((row) => {
+      const foundByIds = Array.isArray(row.encontrada_por_id)
+        ? row.encontrada_por_id
+        : row.encontrada_por_id ? [row.encontrada_por_id] : []
+      const foundBy = foundByIds.map((id) => employeesById.get(id)).filter(Boolean)
+      const executor = Array.isArray(row.funcionarios) ? row.funcionarios[0] : row.funcionarios
+      const photos = Array.isArray(row.fotos_url) ? row.fotos_url : []
+      const minutes = row.tempo_execucao_minutos
+      const hours = minutes == null ? 0 : Math.floor(minutes / 60)
+      const remainingMinutes = minutes == null ? 0 : minutes % 60
+      const repairTime = minutes == null ? '' : `${hours ? `${hours}h` : ''}${remainingMinutes ? `${remainingMinutes}m` : hours ? '' : `${minutes}m`}`
+
+      return [
+        row.numero_etiqueta || '',
+        row.data_criacao ? new Date(row.data_criacao).toLocaleDateString('pt-BR') : '',
+        row.maquina_parada ? 'SIM' : 'NÃO',
+        row.prioridade === 'A' ? 'Crítica' : row.prioridade === 'B' ? 'Média' : '',
+        row.locais?.tag || '',
+        row.descricao_anomalia || '',
+        foundBy.map((employee) => employee.nome).join(', '),
+        foundBy.map((employee) => employee.re).join(', '),
+        executor?.nome || '',
+        executor?.re || '',
+        row.descricao_acao || '',
+        repairTime,
+        photos.join(' | '),
+      ]
+    })
+    const csv = Papa.unparse({
+      fields: [
+        'Nº da Etiqueta',
+        'Data de Abertura',
+        'Máquina Precisa Estar Parada?',
+        'Prioridade',
+        'Local (TAG)',
+        'Descrição da Anomalia',
+        'Encontrada por (Nomes)',
+        'Encontrada por (RE)',
+        'Executado por (Nome)',
+        'Executado por (RE)',
+        'Descrição da Ação',
+        'Tempo de Reparo',
+        'Link Imagem',
+      ],
+      data,
+    }, { delimiter: ';', newline: '\r\n' })
+    const url = URL.createObjectURL(new Blob(['\uFEFF', csv], { type: 'text/csv;charset=utf-8;' }))
     const link = document.createElement('a')
     link.href = url
     link.download = 'etiquetas-azuis.csv'

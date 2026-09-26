@@ -19,10 +19,95 @@ const formatDate = (value) => value ? value.split('-').reverse().join('/') : ''
 const parseDate = (value) => { const digits = value.replace(/\D/g, '').slice(0, 8); const day = digits.slice(0, 2); const month = digits.slice(2, 4); const year = digits.slice(4, 8); return { display: [day, month, year].filter(Boolean).join('/'), iso: day.length === 2 && month.length === 2 && year.length === 4 ? `${year}-${month}-${day}` : '' } }
 
 export default function App() { return <BrowserRouter><Shell /></BrowserRouter> }
+
+function InstallPwaButton() {
+  const [installPrompt, setInstallPrompt] = useState(null)
+  const [installMessage, setInstallMessage] = useState('')
+  const [installed, setInstalled] = useState(() => (
+    window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true
+  ))
+
+  useEffect(() => {
+    const onBeforeInstallPrompt = (event) => {
+      event.preventDefault()
+      setInstallPrompt(event)
+    }
+    const onAppInstalled = () => {
+      setInstalled(true)
+      setInstallPrompt(null)
+      setInstallMessage('')
+    }
+
+    window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt)
+    window.addEventListener('appinstalled', onAppInstalled)
+    return () => {
+      window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt)
+      window.removeEventListener('appinstalled', onAppInstalled)
+    }
+  }, [])
+
+  const install = async () => {
+    setInstallMessage('')
+    if (!installPrompt) {
+      const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent)
+        || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+      setInstallMessage(isIos
+        ? 'Toque em Compartilhar e escolha Adicionar à Tela de Início.'
+        : 'Use o menu do navegador e escolha Instalar aplicativo ou Adicionar a tela inicial.')
+      return
+    }
+
+    await installPrompt.prompt()
+    const { outcome } = await installPrompt.userChoice
+    setInstallPrompt(null)
+    if (outcome === 'accepted') setInstalled(true)
+  }
+
+  if (installed) return null
+
+  return <div className="install-control">
+    <button className="install-button" type="button" onClick={install}>
+      <Download size={16} />
+      Instalar aplicativo
+    </button>
+    {installMessage && <div className="install-help" role="status">{installMessage}</div>}
+  </div>
+}
+
 function Shell() {
   const [open, setOpen] = useState(false); const [online, setOnline] = useState(navigator.onLine); const [queue, setQueue] = useState(getOfflineQueue().length)
   useEffect(() => { const on = async () => { setOnline(true); await syncOfflineQueue(supabase); setQueue(getOfflineQueue().length) }; const off = () => setOnline(false); addEventListener('online', on); addEventListener('offline', off); if (navigator.onLine) on(); return () => { removeEventListener('online', on); removeEventListener('offline', off) } }, [])
-  return <div className="app-shell"><aside className={`sidebar ${open ? 'is-open' : ''}`}><div className="brand"><img src="/simbolo-santher.svg" alt="Santher" /><div><strong>Etiqueta Azul</strong><span>Operação digital</span></div></div><nav><NavItem to="/" end icon={<FileText size={18} />} text="Nova etiqueta" /><NavItem to="/dashboard" icon={<LayoutDashboard size={18} />} text="Dashboard" /><NavItem to="/admin" icon={<Settings size={18} />} text="Configurações" /></nav><div className="sidebar-foot"><div className={`connection ${online ? 'online' : ''}`}><i />{online ? 'Online' : 'Sem conexão'}</div><small>Santher • Planta Industrial</small></div></aside>{open && <button className="scrim" onClick={() => setOpen(false)} aria-label="Fechar menu" />}<main className="main-content"><header className="topbar"><button className="icon-button mobile-menu" onClick={() => setOpen(true)} aria-label="Abrir menu"><Menu size={20} /></button><div className="breadcrumb">Operação <span>/</span> Etiqueta Azul</div><div className="top-actions"><div className="sync-badge">{online ? <Wifi size={14} /> : <CloudOff size={14} />}{queue ? `${queue} pendente${queue > 1 ? 's' : ''}` : 'Tudo sincronizado'}</div><div className="avatar">OP</div></div></header><Routes><Route path="/" element={<HomePage onSaved={() => setQueue(getOfflineQueue().length)} />} /><Route path="/dashboard" element={<DashboardPage />} /><Route path="/admin" element={<AdminPage />} /></Routes></main></div>
+  return <div className="app-shell">
+    <aside className={`sidebar ${open ? 'is-open' : ''}`}>
+      <div className="brand"><img src="/simbolo-santher.svg" alt="Santher" /><div><strong>Etiqueta Azul</strong><span>Operação digital</span></div></div>
+      <nav>
+        <NavItem to="/" end icon={<FileText size={18} />} text="Nova etiqueta" />
+        <NavItem to="/dashboard" icon={<LayoutDashboard size={18} />} text="Dashboard" />
+        <NavItem to="/admin" icon={<Settings size={18} />} text="Configurações" />
+      </nav>
+      <div className="sidebar-foot">
+        <InstallPwaButton />
+        <div className={`connection ${online ? 'online' : ''}`}><i />{online ? 'Online' : 'Sem conexão'}</div>
+        <small>Santher • Planta Industrial</small>
+      </div>
+    </aside>
+    {open && <button className="scrim" onClick={() => setOpen(false)} aria-label="Fechar menu" />}
+    <main className="main-content">
+      <header className="topbar">
+        <button className="icon-button mobile-menu" onClick={() => setOpen(true)} aria-label="Abrir menu"><Menu size={20} /></button>
+        <div className="breadcrumb">Operação <span>/</span> Etiqueta Azul</div>
+        <div className="top-actions">
+          <div className="sync-badge">{online ? <Wifi size={14} /> : <CloudOff size={14} />}{queue ? `${queue} pendente${queue > 1 ? 's' : ''}` : 'Tudo sincronizado'}</div>
+          <div className="avatar">OP</div>
+        </div>
+      </header>
+      <Routes>
+        <Route path="/" element={<HomePage onSaved={() => setQueue(getOfflineQueue().length)} />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/admin" element={<AdminPage />} />
+      </Routes>
+    </main>
+  </div>
 }
 function NavItem({ to, end, icon, text }) { return <NavLink to={to} end={end} className="nav-item">{icon}<span>{text}</span></NavLink> }
 function useCatalog() { const saved = (key) => JSON.parse(localStorage.getItem(`azul-catalog-${key}`) || 'null'); const [catalog, setCatalog] = useState(() => ({ locais: saved('locais') || (supabase ? [] : fallback.locais), tipos: saved('tipos') || (supabase ? [] : fallback.tipos), funcionarios: saved('funcionarios') || (supabase ? [] : fallback.funcionarios) })); useEffect(() => { if (!supabase) return; Promise.all([supabase.from('locais').select('*').order('tag'), supabase.from('tipos_registro').select('*').order('nome'), supabase.from('funcionarios').select('*').order('nome')]).then(([a, b, c]) => setCatalog({ locais: a.data || [], tipos: b.data || [], funcionarios: c.data || [] })) }, []); return [catalog, setCatalog] }

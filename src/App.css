@@ -54,3 +54,7 @@
 .install-button:hover { background:#e4f0fa; border-color:#bdd6ec; }
 .install-button:focus-visible { outline:2px solid var(--blue); outline-offset:2px; }
 .install-help { color:var(--muted); font-size:11px; line-height:1.45; margin-top:8px; overflow-wrap:anywhere; }
+.table-panel table { min-width:1050px; }
+.image-links { display:flex; flex-wrap:wrap; gap:8px; min-width:130px; }
+.image-links a { align-items:center; color:var(--blue); display:inline-flex; font-size:11px; gap:4px; text-decoration:none; white-space:nowrap; }
+.image-links a:hover { text-decoration:underline; }

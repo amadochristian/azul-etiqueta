@@ -7,9 +7,11 @@ const rawSupabase = supabaseUrl && supabaseKey
   ? createBrowserClient(supabaseUrl, supabaseKey)
   : null
 
-const removeLegacyExecutor = (value) => {
+const normalizeExecutor = (value) => {
   const clean = { ...value }
-  delete clean.executado_por_id
+  clean.executado_por_id = Array.isArray(clean.executado_por_id)
+    ? clean.executado_por_id[0] || null
+    : clean.executado_por_id || null
   return clean
 }
 
@@ -24,7 +26,7 @@ export const supabase = rawSupabase
             get(builder, builderProperty) {
               if (builderProperty !== 'insert') return builder[builderProperty]
               return (values, ...args) => builder.insert(
-                Array.isArray(values) ? values.map(removeLegacyExecutor) : removeLegacyExecutor(values),
+                Array.isArray(values) ? values.map(normalizeExecutor) : normalizeExecutor(values),
                 ...args,
               )
             },

@@ -114,13 +114,161 @@ function useCatalog() { const saved = (key) => JSON.parse(localStorage.getItem(`
 function Page({ eyebrow, title, description, children }) { return <div className="page"><div className="page-heading"><div><span className="eyebrow">{eyebrow}</span><h1>{title}</h1><p>{description}</p></div><div className="page-mark"><Factory size={26} /><span>PLANTA<br />INDUSTRIAL</span></div></div>{children}</div> }
 function Field({ label, required, children }) { return <label className="field"><span>{label}{required && <b>*</b>}</span>{children}</label> }
 function ChoiceGroup({ label, value, onChange, options }) { return <div className="choice-group"><span className="field-label">{label}</span><div className="choice-row">{options.map((option) => <button type="button" className={`choice-card ${value === option.value ? 'selected' : ''}`} onClick={() => onChange(option.value)} key={String(option.value)}><span className={`radio ${value === option.value ? 'checked' : ''}`} /><span><strong>{option.label}</strong><small>{option.hint}</small></span></button>)}</div></div> }
-function SearchSelect({ items, value, onChange }) { const [query, setQuery] = useState(''); const [open, setOpen] = useState(false); const selectedIds = Array.isArray(value) ? value : value ? [value] : []; const selected = items.filter((item) => selectedIds.includes(item.id)); const filtered = items.filter((item) => !selectedIds.includes(item.id) && `${item.nome} ${item.re}`.toLowerCase().includes(query.toLowerCase())); const choose = (item) => { onChange([...selectedIds, item.id]); setQuery('') }; const remove = (id) => onChange(selectedIds.filter((itemId) => itemId !== id)); return <div className="search-select"><div className="multi-select-box" onClick={() => setOpen(true)}>{selected.map((item) => <span className="selected-person" key={item.id}>{item.nome}<button type="button" onClick={(event) => { event.stopPropagation(); remove(item.id) }} aria-label={`Remover ${item.nome}`}>×</button></span>)}<Search size={16} /><input value={query} placeholder={selected.length ? 'Adicionar colaborador...' : 'Buscar colaborador...'} onFocus={() => setOpen(true)} onChange={(e) => { setQuery(e.target.value); setOpen(true) }} onBlur={() => setTimeout(() => setOpen(false), 150)} /></div>{open && <div className="select-options">{filtered.map((item) => <button type="button" key={item.id} onMouseDown={(event) => event.preventDefault()} onClick={() => choose(item)}><span className="mini-avatar">{item.nome.slice(0, 2).toUpperCase()}</span><span>{item.nome}<small>RE {item.re}</small></span></button>)}</div>}</div> }
+function SearchSelect({ items, value, onChange }) {
+  const [query, setQuery] = useState('')
+  const [open, setOpen] = useState(false)
+  const multiple = Array.isArray(value)
+  const selectedIds = multiple ? value : value ? [value] : []
+  const selected = items.filter((item) => selectedIds.includes(item.id))
+  const filtered = items.filter((item) => !selectedIds.includes(item.id) && `${item.nome} ${item.re}`.toLowerCase().includes(query.toLowerCase()))
+  const choose = (item) => {
+    onChange(multiple ? [...selectedIds, item.id] : item.id)
+    setQuery('')
+    if (!multiple) setOpen(false)
+  }
+  const remove = (id) => onChange(multiple ? selectedIds.filter((itemId) => itemId !== id) : '')
+
+  return <div className="search-select">
+    <div className="multi-select-box" onClick={() => setOpen(true)}>
+      {selected.map((item) => <span className="selected-person" key={item.id}>{item.nome}<button type="button" onClick={(event) => { event.stopPropagation(); remove(item.id) }} aria-label={`Remover ${item.nome}`}>×</button></span>)}
+      <Search size={16} />
+      <input value={query} placeholder={selected.length && multiple ? 'Adicionar colaborador...' : selected.length ? 'Buscar outro colaborador...' : 'Buscar colaborador...'} onFocus={() => setOpen(true)} onChange={(event) => { setQuery(event.target.value); setOpen(true) }} onBlur={() => setTimeout(() => setOpen(false), 150)} />
+    </div>
+    {open && <div className="select-options">{filtered.map((item) => <button type="button" key={item.id} onMouseDown={(event) => event.preventDefault()} onClick={() => choose(item)}><span className="mini-avatar">{item.nome.slice(0, 2).toUpperCase()}</span><span>{item.nome}<small>RE {item.re}</small></span></button>)}</div>}
+  </div>
+}
 function Toast({ notice }) { return <div className={`toast ${notice.type}`}><span>{notice.type === 'success' ? <Check size={18} /> : <AlertTriangle size={18} />}</span>{notice.text}</div> }
 
 function HomePage({ onSaved }) {
-  const [catalog] = useCatalog(); const [form, setForm] = useState({ data_criacao: today(), local_id: '', tipo_registro_id: '', maquina_parada: false, prioridade: 'B', encontrada_por_id: '', descricao_anomalia: '', executado_por_id: '', descricao_acao: '', tempo_execucao_minutos: '' }); const [files, setFiles] = useState([]); const [notice, setNotice] = useState(null); const [saving, setSaving] = useState(false); const local = catalog.locais.find((item) => item.id === form.local_id); const update = (key, value) => setForm((old) => ({ ...old, [key]: value }))
-  async function submit(event) { event.preventDefault(); if (!form.local_id || !form.tipo_registro_id || !form.encontrada_por_id || !form.descricao_anomalia) { setNotice({ type: 'error', text: 'Preencha local, tipo, responsável e descrição.' }); return } setSaving(true); const payload = { ...form, tempo_execucao_minutos: form.tempo_execucao_minutos ? Number(form.tempo_execucao_minutos) : null, fotos_url: [], status: 'Concluído', data_criacao: new Date(`${form.data_criacao}T12:00:00`).toISOString() }; try { if (!navigator.onLine || !supabase) { enqueueLabel({ ...payload, offline_id: crypto.randomUUID() }); setNotice({ type: 'success', text: 'Etiqueta salva no dispositivo e será sincronizada quando houver conexão.' }); onSaved() } else { const urls = []; for (const file of files) { const path = `${Date.now()}-${file.name}`; const upload = await supabase.storage.from('etiqueta-fotos').upload(path, file); if (upload.error) throw upload.error; urls.push(supabase.storage.from('etiqueta-fotos').getPublicUrl(path).data.publicUrl) } const { error } = await supabase.from('etiquetas_azuis').insert({ ...payload, fotos_url: urls }); if (error) throw error; setNotice({ type: 'success', text: 'Etiqueta finalizada e sincronizada com sucesso.' }) } setForm({ data_criacao: today(), local_id: '', tipo_registro_id: '', maquina_parada: false, prioridade: 'B', encontrada_por_id: '', descricao_anomalia: '', executado_por_id: '', descricao_acao: '', tempo_execucao_minutos: '' }); setFiles([]) } catch (error) { enqueueLabel({ ...payload, offline_id: crypto.randomUUID() }); setNotice({ type: 'error', text: `Falha ao sincronizar: ${error.message || 'verifique o banco e as políticas do Supabase'}` }) } finally { setSaving(false); setTimeout(() => setNotice(null), 8000) } }
+  const [catalog] = useCatalog(); const [form, setForm] = useState({ data_criacao: today(), local_id: '', tipo_registro_id: '', maquina_parada: false, prioridade: 'B', encontrada_por_id: [], descricao_anomalia: '', executado_por_id: '', descricao_acao: '', tempo_execucao_minutos: '' }); const [files, setFiles] = useState([]); const [notice, setNotice] = useState(null); const [saving, setSaving] = useState(false); const local = catalog.locais.find((item) => item.id === form.local_id); const update = (key, value) => setForm((old) => ({ ...old, [key]: value }))
+  async function submit(event) {
+    event.preventDefault()
+    if (!form.local_id || !form.tipo_registro_id || !form.encontrada_por_id.length || !form.descricao_anomalia) {
+      setNotice({ type: 'error', text: 'Preencha local, tipo, responsável e descrição.' })
+      return
+    }
+    setSaving(true)
+    const payload = {
+      ...form,
+      tempo_execucao_minutos: form.tempo_execucao_minutos ? Number(form.tempo_execucao_minutos) : null,
+      fotos_url: [],
+      status: 'Concluído',
+      data_criacao: new Date(`${form.data_criacao}T12:00:00`).toISOString(),
+    }
+
+    try {
+      if (!navigator.onLine || !supabase) {
+        enqueueLabel({ ...payload, offline_id: crypto.randomUUID() })
+        setNotice({ type: 'success', text: 'Etiqueta salva no dispositivo e será sincronizada quando houver conexão.' })
+        onSaved()
+      } else {
+        const urls = []
+        for (const file of files) {
+          const path = `${Date.now()}-${file.name}`
+          const upload = await supabase.storage.from('etiqueta-fotos').upload(path, file)
+          if (upload.error) throw upload.error
+          urls.push(supabase.storage.from('etiqueta-fotos').getPublicUrl(path).data.publicUrl)
+        }
+        const { error } = await supabase.from('etiquetas_azuis').insert({ ...payload, fotos_url: urls })
+        if (error) throw error
+        setNotice({ type: 'success', text: 'Etiqueta finalizada e sincronizada com sucesso.' })
+      }
+
+      setForm({ data_criacao: today(), local_id: '', tipo_registro_id: '', maquina_parada: false, prioridade: 'B', encontrada_por_id: [], descricao_anomalia: '', executado_por_id: '', descricao_acao: '', tempo_execucao_minutos: '' })
+      setFiles([])
+    } catch (error) {
+      enqueueLabel({ ...payload, offline_id: crypto.randomUUID() })
+      setNotice({ type: 'error', text: `Falha ao sincronizar: ${error.message || 'verifique o banco e as políticas do Supabase'}` })
+    } finally {
+      setSaving(false)
+      setTimeout(() => setNotice(null), 8000)
+    }
+  }
   return <Page eyebrow="REGISTRO DE SERVIÇO" title="Nova etiqueta" description="Preencha os dados da ocorrência para iniciar o atendimento."><form className="form-layout" onSubmit={submit}><section className="panel form-panel"><div className="panel-heading"><div><h2>Identificação</h2><p>Dados básicos da etiqueta e do ponto de operação.</p></div><span className="draft-chip"><i /> Rascunho</span></div><div className="field-grid three"><Field label="Nº da etiqueta"><div className="input-wrap"><span className="input-prefix">#</span><input value="Automático" readOnly /></div></Field><Field label="Data de criação"><input type="date" value={form.data_criacao} onChange={(e) => update('data_criacao', e.target.value)} /></Field><Field label="Status"><div className="locked-field"><Check size={15} /> Concluído após envio</div></Field></div><div className="field-grid two"><Field label="Local (TAG)" required><select value={form.local_id} onChange={(e) => update('local_id', e.target.value)}><option value="">Selecione o local...</option>{catalog.locais.map((item) => <option value={item.id} key={item.id}>{item.tag} — {item.equipamento}</option>)}</select></Field><Field label="Equipamento"><input value={local?.equipamento || 'Preenchido automaticamente'} readOnly className="muted-input" /></Field><Field label="Tipo de registro" required><select value={form.tipo_registro_id} onChange={(e) => update('tipo_registro_id', e.target.value)}><option value="">Selecione o tipo...</option>{catalog.tipos.map((item) => <option value={item.id} key={item.id}>{item.nome}</option>)}</select></Field></div></section><section className="panel form-panel"><div className="panel-heading"><div><h2>Classificação</h2><p>Defina o impacto e a urgência da ocorrência.</p></div></div><div className="choice-columns"><ChoiceGroup label="Máquina parada?" value={form.maquina_parada} onChange={(v) => update('maquina_parada', v)} options={[{ value: true, label: 'Sim', hint: 'Interrompeu a produção' }, { value: false, label: 'Não', hint: 'Produção em andamento' }]} /><ChoiceGroup label="Prioridade" value={form.prioridade} onChange={(v) => update('prioridade', v)} options={[{ value: 'A', label: 'A — Crítica', hint: 'Ação imediata' }, { value: 'B', label: 'B — Média', hint: 'Programar ação' }]} /></div><div className="field-grid two"><Field label="Encontrada por" required><SearchSelect items={catalog.funcionarios} value={form.encontrada_por_id} onChange={(v) => update('encontrada_por_id', v)} /></Field><Field label="Fotos da ocorrência"><label className="upload-box"><ImagePlus size={22} /><span>{files.length ? `${files.length} arquivo${files.length > 1 ? 's' : ''} selecionado${files.length > 1 ? 's' : ''}` : 'Adicionar fotos'}</span><small>JPG, PNG até 10 MB cada</small><input type="file" accept="image/*" multiple onChange={(e) => setFiles(Array.from(e.target.files))} /></label></Field></div><Field label="Descrição da anomalia" required><textarea rows="4" placeholder="Descreva o que foi encontrado, incluindo sintomas ou condições observadas..." value={form.descricao_anomalia} onChange={(e) => update('descricao_anomalia', e.target.value)} /></Field></section><div className="section-divider"><span>Execução</span><div /></div><section className="panel form-panel execution-panel"><div className="panel-heading"><div><h2>Registro da ação</h2><p>Complete após a intervenção no equipamento.</p></div><ShieldCheck size={24} className="heading-icon" /></div><div className="field-grid two"><Field label="Executado por"><SearchSelect items={catalog.funcionarios} value={form.executado_por_id} onChange={(v) => update('executado_por_id', v)} /></Field><Field label="Tempo de execução"><div className="input-wrap"><input type="number" min="0" placeholder="0" value={form.tempo_execucao_minutos} onChange={(e) => update('tempo_execucao_minutos', e.target.value)} /><span className="input-suffix">minutos</span></div></Field></div><Field label="Descrição da ação"><textarea rows="4" placeholder="Descreva a solução aplicada e observações finais..." value={form.descricao_acao} onChange={(e) => update('descricao_acao', e.target.value)} /></Field></section><div className="form-footer"><span className="autosave"><UploadCloud size={15} /> Dados protegidos neste dispositivo</span><button className="primary-button" type="submit" disabled={saving}>{saving ? 'Salvando...' : 'Finalizar etiqueta'} <ArrowUpRight size={17} /></button></div></form>{notice && <Toast notice={notice} />}</Page>
 }
 
-function DashboardPage() { const [rows, setRows] = useState([]); const [filters, setFilters] = useState({ start: '', end: '', priority: '' }); useEffect(() => { if (supabase) supabase.from('etiquetas_azuis').select('*, locais(tag), tipos_registro(nome)').order('data_criacao', { ascending: false }).limit(50).then(({ data }) => setRows(data || [])); else setRows(JSON.parse(localStorage.getItem('demo-labels') || '[]')) }, []); const filtered = rows.filter((row) => (!filters.priority || row.prioridade === filters.priority) && (!filters.start || row.data_criacao?.slice(0, 10) >= filters.start) && (!filters.end || row.data_criacao?.slice(0, 10) <= filters.end)); const avg = filtered.length ? Math.round(filtered.reduce((sum, row) => sum + (row.tempo_execucao_minutos || 0), 0) / filtered.length) : 0; const exportCsv = () => { const url = URL.createObjectURL(new Blob([Papa.unparse(filtered)], { type: 'text/csv;charset=utf-8;' })); const link = document.createElement('a'); link.href = url; link.download = 'etiquetas-azuis.csv'; link.click(); URL.revokeObjectURL(url) }; return <Page eyebrow="CENTRO DE CONTROLE" title="Visão geral" description="Acompanhe o ritmo das intervenções e os principais pontos de atenção."><div className="kpi-grid"><Kpi icon={<FileText />} label="Total de etiquetas" value={filtered.length || '—'} meta="No período selecionado" /><Kpi icon={<Clock3 />} label="Tempo médio" value={avg ? `${avg} min` : '—'} meta="Por atendimento concluído" /><Kpi icon={<AlertTriangle />} label="Prioridade A" value={filtered.filter((row) => row.prioridade === 'A').length || '—'} meta="Exigem ação imediata" alert /></div><section className="panel table-panel"><div className="table-toolbar"><div><h2>Histórico recente</h2><p>Últimas etiquetas registradas na operação.</p></div><button className="secondary-button" onClick={exportCsv}><Download size={16} /> Exportar CSV</button></div><div className="filters"><label><span>De</span><input type="date" value={filters.start} onChange={(e) => setFilters({ ...filters, start: e.target.value })} /></label><label><span>Até</span><input type="date" value={filters.end} onChange={(e) => setFilters({ ...filters, end: e.target.value })} /></label><label><span>Prioridade</span><select value={filters.priority} onChange={(e) => setFilters({ ...filters, priority: e.target.value })}><option value="">Todas</option><option value="A">A — Crítica</option><option value="B">B — Média</option></select></label></div><div className="table-scroll"><table><thead><tr><th>Etiqueta</th><th>Local</th><th>Tipo</th><th>Prioridade</th><th>Data</th><th>Status</th></tr></thead><tbody>{filtered.length ? filtered.map((row) => <tr key={row.id}><td className="strong-cell">#{row.numero_etiqueta || '—'}</td><td>{row.locais?.tag || '—'}</td><td>{row.tipos_registro?.nome || '—'}</td><td><span className={`priority priority-${row.prioridade}`}>{row.prioridade}</span></td><td>{row.data_criacao ? new Date(row.data_criacao).toLocaleDateString('pt-BR') : '—'}</td><td><span className="status-label"><Check size={13} /> Concluído</span></td></tr>) : <tr><td colSpan="6" className="empty-state"><BarChart3 size={25} />Nenhuma etiqueta encontrada neste período.</td></tr>}</tbody></table></div></section></Page> }
+function formatRepairTime(minutes) {
+  if (minutes == null) return '—'
+  const hours = Math.floor(minutes / 60)
+  const remainingMinutes = minutes % 60
+  if (!hours) return `${minutes} min`
+  return remainingMinutes ? `${hours}h ${remainingMinutes}min` : `${hours}h`
+}
+
+function DashboardPage() {
+  const [rows, setRows] = useState([])
+  const [filters, setFilters] = useState({ start: '', end: '', priority: '' })
+
+  useEffect(() => {
+    if (supabase) {
+      supabase.from('etiquetas_azuis')
+        .select('*, locais(tag), funcionarios(nome)')
+        .order('data_criacao', { ascending: false })
+        .limit(50)
+        .then(({ data }) => setRows(data || []))
+    } else {
+      setRows(JSON.parse(localStorage.getItem('demo-labels') || '[]'))
+    }
+  }, [])
+
+  const filtered = rows.filter((row) => (
+    (!filters.priority || row.prioridade === filters.priority)
+    && (!filters.start || row.data_criacao?.slice(0, 10) >= filters.start)
+    && (!filters.end || row.data_criacao?.slice(0, 10) <= filters.end)
+  ))
+  const avg = filtered.length
+    ? Math.round(filtered.reduce((sum, row) => sum + (row.tempo_execucao_minutos || 0), 0) / filtered.length)
+    : 0
+  const exportCsv = () => {
+    const url = URL.createObjectURL(new Blob([Papa.unparse(filtered)], { type: 'text/csv;charset=utf-8;' }))
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'etiquetas-azuis.csv'
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
+  return <Page eyebrow="CENTRO DE CONTROLE" title="Visão geral" description="Acompanhe o ritmo das intervenções e os principais pontos de atenção.">
+    <div className="kpi-grid">
+      <Kpi icon={<FileText />} label="Total de etiquetas" value={filtered.length || '—'} meta="No período selecionado" />
+      <Kpi icon={<Clock3 />} label="Tempo médio" value={avg ? `${avg} min` : '—'} meta="Por atendimento concluído" />
+      <Kpi icon={<AlertTriangle />} label="Prioridade A" value={filtered.filter((row) => row.prioridade === 'A').length || '—'} meta="Exigem ação imediata" alert />
+    </div>
+    <section className="panel table-panel">
+      <div className="table-toolbar">
+        <div><h2>Histórico recente</h2><p>Últimas etiquetas registradas na operação.</p></div>
+        <button className="secondary-button" onClick={exportCsv}><Download size={16} /> Exportar CSV</button>
+      </div>
+      <div className="filters">
+        <label><span>De</span><input type="date" value={filters.start} onChange={(event) => setFilters({ ...filters, start: event.target.value })} /></label>
+        <label><span>Até</span><input type="date" value={filters.end} onChange={(event) => setFilters({ ...filters, end: event.target.value })} /></label>
+        <label><span>Prioridade</span><select value={filters.priority} onChange={(event) => setFilters({ ...filters, priority: event.target.value })}><option value="">Todas</option><option value="A">A — Crítica</option><option value="B">B — Média</option></select></label>
+      </div>
+      <div className="table-scroll">
+        <table>
+          <thead>
+            <tr><th>Etiqueta</th><th>Data</th><th>Prioridade</th><th>Local</th><th>Executado por</th><th>Imagem</th><th>Tempo de Reparo</th></tr>
+          </thead>
+          <tbody>
+            {filtered.length ? filtered.map((row) => {
+              const photos = Array.isArray(row.fotos_url) ? row.fotos_url : []
+              return <tr key={row.id}>
+                <td className="strong-cell">#{row.numero_etiqueta || '—'}</td>
+                <td>{row.data_criacao ? new Date(row.data_criacao).toLocaleDateString('pt-BR') : '—'}</td>
+                <td><span className={`priority priority-${row.prioridade}`}>{row.prioridade || '—'}</span></td>
+                <td>{row.locais?.tag || '—'}</td>
+                <td>{row.funcionarios?.nome || '—'}</td>
+                <td>
+                  {photos.length
+                    ? <div className="image-links">{photos.map((url, index) => <a href={url} key={url} target="_blank" rel="noreferrer" aria-label={`Abrir imagem ${index + 1} da etiqueta ${row.numero_etiqueta || ''}`}><ImagePlus size={14} />{photos.length === 1 ? 'Abrir imagem' : `Imagem ${index + 1}`}</a>)}</div>
+                    : '—'}
+                </td>
+                <td>{formatRepairTime(row.tempo_execucao_minutos)}</td>
+              </tr>
+            }) : <tr><td colSpan="7" className="empty-state"><BarChart3 size={25} />Nenhuma etiqueta encontrada neste período.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </Page>
+}

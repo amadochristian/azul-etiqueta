@@ -112,7 +112,20 @@ function Shell() {
 function NavItem({ to, end, icon, text }) { return <NavLink to={to} end={end} className="nav-item">{icon}<span>{text}</span></NavLink> }
 function useCatalog() { const saved = (key) => JSON.parse(localStorage.getItem(`azul-catalog-${key}`) || 'null'); const [catalog, setCatalog] = useState(() => ({ locais: saved('locais') || (supabase ? [] : fallback.locais), tipos: saved('tipos') || (supabase ? [] : fallback.tipos), funcionarios: saved('funcionarios') || (supabase ? [] : fallback.funcionarios) })); useEffect(() => { if (!supabase) return; Promise.all([supabase.from('locais').select('*').order('tag'), supabase.from('tipos_registro').select('*').order('nome'), supabase.from('funcionarios').select('*').order('nome')]).then(([a, b, c]) => setCatalog({ locais: a.data || [], tipos: b.data || [], funcionarios: c.data || [] })) }, []); return [catalog, setCatalog] }
 function Page({ eyebrow, title, description, children }) { return <div className="page"><div className="page-heading"><div><span className="eyebrow">{eyebrow}</span><h1>{title}</h1><p>{description}</p></div><div className="page-mark"><Factory size={26} /><span>PLANTA<br />INDUSTRIAL</span></div></div>{children}</div> }
-function Field({ label, required, children }) { return <label className="field"><span>{label}{required && <b>*</b>}</span>{children}</label> }
+function DurationInput({ value, onChange }) {
+  return <div className="input-wrap">
+    <input className="duration-input" type="text" placeholder="Ex.: 2h30m ou 150" value={value} onChange={onChange} />
+  </div>
+}
+
+function Field({ label, required, children }) {
+  const durationInput = label === 'Tempo de execução' ? children.props.children[0] : null
+  const content = durationInput
+    ? <DurationInput value={durationInput.props.value} onChange={durationInput.props.onChange} />
+    : children
+
+  return <label className="field"><span>{label}{required && <b>*</b>}</span>{content}</label>
+}
 function ChoiceGroup({ label, value, onChange, options }) { return <div className="choice-group"><span className="field-label">{label}</span><div className="choice-row">{options.map((option) => <button type="button" className={`choice-card ${value === option.value ? 'selected' : ''}`} onClick={() => onChange(option.value)} key={String(option.value)}><span className={`radio ${value === option.value ? 'checked' : ''}`} /><span><strong>{option.label}</strong><small>{option.hint}</small></span></button>)}</div></div> }
 function SearchSelect({ items, value, onChange }) {
   const [query, setQuery] = useState('')
@@ -147,10 +160,15 @@ function HomePage({ onSaved }) {
       setNotice({ type: 'error', text: 'Preencha local, tipo, responsável e descrição.' })
       return
     }
+    const repairTimeMinutes = parseRepairDuration(form.tempo_execucao_minutos)
+    if (Number.isNaN(repairTimeMinutes)) {
+      setNotice({ type: 'error', text: 'Informe o tempo como 2h30m, 30m ou em minutos (150).' })
+      return
+    }
     setSaving(true)
     const payload = {
       ...form,
-      tempo_execucao_minutos: form.tempo_execucao_minutos ? Number(form.tempo_execucao_minutos) : null,
+      tempo_execucao_minutos: repairTimeMinutes,
       fotos_url: [],
       status: 'Concluído',
       data_criacao: new Date(`${form.data_criacao}T12:00:00`).toISOString(),
@@ -191,8 +209,19 @@ function formatRepairTime(minutes) {
   if (minutes == null) return 'Não informado'
   const hours = Math.floor(minutes / 60)
   const remainingMinutes = minutes % 60
-  if (!hours) return `${minutes} min`
-  return remainingMinutes ? `${hours}h ${remainingMinutes}min` : `${hours}h`
+  if (!hours) return `${minutes}m`
+  return remainingMinutes ? `${hours}h${remainingMinutes}m` : `${hours}h`
+}
+
+function parseRepairDuration(value) {
+  const input = value.trim().toLowerCase().replace(/\s+/g, '')
+  if (!input) return null
+
+  const match = input.match(/^(?:(\d+)h)?(?:(\d+)(?:minutos|min|mins|m)?)?$/)
+  if (!match || (match[1] === undefined && match[2] === undefined)) return Number.NaN
+
+  const minutes = Number(match[1] || 0) * 60 + Number(match[2] || 0)
+  return Number.isSafeInteger(minutes) ? minutes : Number.NaN
 }
 
 function DashboardPage() {
